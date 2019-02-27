@@ -1,38 +1,71 @@
-const int Trigger = 2; //pin digital 2 para el trigger
-const int Echo = 3; //pin analogo 3 para recibir el eco
-long t; //tiempo que tarda en regresar el eco
-double d;  //distancia en centimetros
-int e; //guarda la altura del objeto
+#include <NewPing.h>
+#include <SoftwareSerial.h>
+
+#define ULTRA_TRIGGER_PIN  12
+#define ULTRA_ECHO_PIN     11
+#define ULTRA_MAX_DISTANCE 30
+
+#define ESP_SERIAL_RX 2
+#define ESP_SERIAL_TX 3
+
+String dataJSON;
+int height = 0;
+float weight = 0;
+ 
+NewPing sonar(ULTRA_TRIGGER_PIN, ULTRA_ECHO_PIN, ULTRA_MAX_DISTANCE);
+SoftwareSerial ESPserial(ESP_SERIAL_RX, ESP_SERIAL_TX);
 
 void setup() {
-  Serial.begin(9600); //inicia la comunicacion por puerto serial
-  pinMode(Trigger,OUTPUT);  //pin de salida
-  pinMode(Echo,INPUT);      //pin de entrada
-  digitalWrite(Trigger,LOW);
+  Serial.begin(115200);
+  ESPserial.begin(57600);
 }
 
 void loop() {
-  digitalWrite(Trigger, HIGH);
-  delayMicroseconds(10);  //enviar pulso de 10 us
-  digitalWrite(Trigger,LOW);
-
-  t = pulseIn(Echo,HIGH); //obtener el ancho del pulso
-  d = (0.034/2)*t;  //escalar el tiempo a una distancia en cm
-  d = p(d, 193.5);
-  e = (int)(((d/2)/193.5));
-  Serial.print("Distancia: ");
-  Serial.print(d);
-  Serial.print("cm");
-  Serial.println();
-  Serial.println();
-  Serial.print("Altura del Objeto: ");
-  Serial.print(e);  //enviamos por serial el valor de la distancia
-  Serial.print("cm");
-  Serial.println();
-  delay(500);
+  delay(50);
+  setHeight();
+  setWeight();
+  
+  createJSON();
+  sendLineToESP(dataJSON);
 }
 
-double p(double d, double m) {
-  if(d>m) return m;
-  return 0;  
+void setHeight() {
+  int distance = sonar.ping_cm();
+  if(distance > ULTRA_MAX_DISTANCE) {
+    distance = distance - ULTRA_MAX_DISTANCE;
+  }
+  if(distance < 0) {
+    distance = 0;
+  }
+  height = ULTRA_MAX_DISTANCE - distance;
+}
+
+void setWeight() {
+  weight = weight + 1;
+}
+
+void createJSON() {
+  String j1 = "{\"version\":\"1.0\",\"height\":";
+  String j2 = ", \"weight\":";
+  String j3 = "}";
+  dataJSON = j1 + height + j2 + weight + j3;
+}
+
+String readLineFromESP() {
+  if (ESPserial.available()){
+    return ESPserial.read();
+  }
+}
+
+void sendLineToESP(String line) {
+  if (ESPserial.available()){
+    //int lsize = line.length();
+    //char copy[lsize];
+    //line.toCharArray(copy, lsize);
+    Serial.print("Enviando datos a ESP: ");
+    Serial.println(line);
+    ESPserial.print(line);
+  } else {
+    Serial.println("ESP no disponible.");
+  }
 }
