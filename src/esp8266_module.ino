@@ -5,6 +5,8 @@
 #include <ESP8266mDNS.h>
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
+// http://forum.arduino.cc/index.php?topic=396450
+
 ESP8266WebServer server(80);
 const char* host = "probatium-bt0001";
 String dataJson = "{\"version\":\"1.0\",\"height\":0, \"weight\":0}";
