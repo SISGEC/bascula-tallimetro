@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <NewPing.h>
 #include <SoftwareSerial.h>
 
@@ -11,7 +12,7 @@
 String dataJSON;
 int height = 0;
 float weight = 0;
- 
+
 NewPing sonar(ULTRA_TRIGGER_PIN, ULTRA_ECHO_PIN, ULTRA_MAX_DISTANCE);
 SoftwareSerial ESPserial(ESP_SERIAL_RX, ESP_SERIAL_TX);
 
@@ -25,8 +26,7 @@ void loop() {
   setHeight();
   setWeight();
   
-  createJSON();
-  sendLineToESP(dataJSON);
+  sendToESP8266();
 }
 
 void setHeight() {
@@ -44,24 +44,9 @@ void setWeight() {
   weight = weight + 1;
 }
 
-void createJSON() {
-  String j1 = "{\"version\":\"1.0\",\"height\":";
-  String j2 = ", \"weight\":";
-  String j3 = "}";
-  dataJSON = j1 + height + j2 + weight + j3;
-}
-
-String readLineFromESP() {
+void sendToESP8266() {
+  String line = String(height) + "|" + String(weight);
   if (ESPserial.available()){
-    return ESPserial.read();
-  }
-}
-
-void sendLineToESP(String line) {
-  if (ESPserial.available()){
-    //int lsize = line.length();
-    //char copy[lsize];
-    //line.toCharArray(copy, lsize);
     Serial.print("Enviando datos a ESP: ");
     Serial.println(line);
     ESPserial.print(line);
