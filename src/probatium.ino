@@ -42,7 +42,7 @@ DynamicJsonDocument doc(capacity);
 JsonObject data = doc.createNestedObject("data");
 
 NewPing sonar(ULTRA_TRIGGER_PIN, ULTRA_ECHO_PIN, ULTRA_MAX_DISTANCE);
-HX711 scale(HX711_DOUT_PIN, HX711_PD_SCK_PIN);
+HX711 balanza(HX711_DOUT_PIN, HX711_PD_SCK_PIN);
 ESP8266WebServer server(SERVER_PORT);
 
 void setup() {
