@@ -2,7 +2,8 @@
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>       //https://github.com/tzapu/WiFiManager
+#include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <NewPing.h>
 #include "HX711.h"
@@ -20,6 +21,9 @@
 #define HX711_MIN_WEIGHT 2 // 2 kilos
 #define HX711_SCALE 439430.25
 #define HX711_TARE_QTY 20
+
+#define LCD_SDA_PIN D5
+#define LCD_SCL_PIN D6
 
 #define SERIAL_BAUDIOS_RATE 57600
 #define SERVER_PORT 80
@@ -43,11 +47,14 @@ JsonObject data = doc.createNestedObject("data");
 
 NewPing sonar(ULTRA_TRIGGER_PIN, ULTRA_ECHO_PIN, ULTRA_MAX_DISTANCE);
 HX711 balanza(HX711_DOUT_PIN, HX711_PD_SCK_PIN);
+LiquidCrystal_I2C lcd(0x27,16,2);
 ESP8266WebServer server(SERVER_PORT);
+WiFiManager wifiManager;
 
 void setup() {
   Serial.begin(SERIAL_BAUDIOS_RATE);
   setupHX711();
+  setupLCD();
   setupESP();
 }
 
@@ -84,11 +91,20 @@ void setWeight() {
 
 void setupHX711() {
   balanza.set_scale(HX711_SCALE);
-  balanza.tare(HX711_TARE_QTY);	
+  balanza.tare(HX711_TARE_QTY);  
+}
+
+void setupLCD() {
+  Wire.begin(LCD_SDA_PIN, LCD_SCL_PIN);
+  lcd.begin();
+  lcd.clear();
+  lcd.backlight();
+  lcd.home();
+  lcd.print("Inicializando...");
+  lcd.print(" PROBATIUM v2.0 ");
 }
 
 void setupWifiManager() {
-  WiFiManager wifiManager;
   //wifiManager.resetSettings();
   wifiManager.setAPStaticIPConfig(WIFI_MANAGER_IP, WIFI_MANAGER_IP, WIFI_MANAGER_MASK);
   if (!wifiManager.autoConnect(WIFI_MANAGER_SSID)) {
@@ -132,10 +148,45 @@ void setupESP() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
   Serial.println("");
+
+  printLCD("IP:", WiFi.localIP());
+  delay(5000);
+}
+
+void prepareLine(String line) {
+  if(line.length() < 16) {
+    for(int i = 0; i < 16; i++) {
+      line = line + " ";
+    }
+  }
+  return line;
+}
+
+void printLine(String line, int n) {
+  if(n < 2) {
+    lcd.home();
+  } else {
+    lcd.setCursor(0, 1);
+  }
+  line = prepareLine(line);
+  lcd.print(line);
+}
+
+void printLCD(String line1, String line2) {
+  lcd.backlight();
+  if(line1.length() > 0) {
+    printLine(line1, 1);
+  }
+  if(line1.length() > 0) {
+    printLine(line2, 2);
+  }
 }
 
 void createJSON() {
   data["height"] = height;
   data["weight"] = weight;
   serializeJson(doc, dataJson);
+  String heightText = "Altura: " + height;
+  String weightText = "Peso: " + weight;
+  printLCD(heightText, weightText);
 }
