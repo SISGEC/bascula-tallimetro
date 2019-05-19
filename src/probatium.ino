@@ -5,24 +5,20 @@
 #include <WiFiManager.h>       //https://github.com/tzapu/WiFiManager
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
-#include <NewPingESP8266.h>
 #include <HX711.h>
 #include <ArduinoJson.h>
 
-#define ULTRA_TRIGGER_PIN  D5
-#define ULTRA_ECHO_PIN     D6
+#define ULTRA_TRIGGER_PIN  D1
+#define ULTRA_ECHO_PIN     D2
 #define ULTRA_MAX_DISTANCE 200 // 2 metros
 #define ULTRA_MIN_DISTANCE 100 // 1 metro
 
-#define HX711_DOUT_PIN D3
-#define HX711_PD_SCK_PIN A0
+#define HX711_DOUT_PIN D5
+#define HX711_PD_SCK_PIN D6
 #define HX711_MAX_WEIGHT 180 // 180 kilos
 #define HX711_MIN_WEIGHT 2 // 2 kilos
 #define HX711_SCALE 439430.25
 #define HX711_TARE_QTY 20
-
-#define LCD_SDA_PIN D2
-#define LCD_SCL_PIN D1
 
 #define SERIAL_BAUDIOS_RATE 115200
 #define SERVER_PORT 80
@@ -42,9 +38,8 @@ const size_t capacity = 2*JSON_OBJECT_SIZE(2);
 DynamicJsonDocument doc(capacity);
 JsonObject data = doc.createNestedObject("data");
 
-NewPingESP8266 sonar(ULTRA_TRIGGER_PIN, ULTRA_ECHO_PIN, ULTRA_MAX_DISTANCE);
 HX711 balanza;
-LiquidCrystal_I2C lcd(0x1B,16,2);
+LiquidCrystal_I2C lcd(0x3F,16,2);
 ESP8266WebServer server(SERVER_PORT);
 WiFiManager wifiManager;
 
@@ -67,21 +62,12 @@ void loop() {
 }
 
 void setHeight() {
-  int distance = sonar.ping_cm();
-  Serial.print("Altura: ");
-  Serial.println(distance);
-  if(distance > ULTRA_MAX_DISTANCE) {
-    distance = distance - ULTRA_MAX_DISTANCE;
-  }
-  if(distance < ULTRA_MIN_DISTANCE) {
-    distance = 0;
-  }
-  height = ULTRA_MAX_DISTANCE - distance;
+  
 }
 
 void setWeight() {
   Serial.print("Peso: ");
-  if (balanza.is_ready()) {
+  if (balanza.is_ready()) { 
     int result = balanza.get_units(20);
     Serial.println(result);
     if(result > HX711_MAX_WEIGHT) {
@@ -105,12 +91,11 @@ void setupHX711() {
 
 void setupLCD() {
   Serial.println("Setup LCD...");
-  Wire.begin(LCD_SDA_PIN, LCD_SCL_PIN);
-  lcd.begin();
+  Wire.begin(2,0);
+  lcd.init();
   lcd.backlight();
   lcd.home();
-  lcd.print("Inicializando...");
-  lcd.print(" PROBATIUM v2.0 ");
+  printLCD("Inicializando...", " PROBATIUM v2.0 ");
 }
 
 void setupWifiManager() {
@@ -126,8 +111,19 @@ void setupWifiManager() {
 
 void setupServer() {
   server.on("/", HTTP_GET, []() {
+    const size_t dic = JSON_OBJECT_SIZE(5);
+    String dijson = "";
+    DynamicJsonDocument didoc(dic);
+    
+    didoc["device"] = "Probatium v2.0";
+    didoc["device_id"] = "20190520-00001-A";
+    didoc["description"] = "Bascula-Tallimetro inteligente";
+    didoc["version"] = "2.0";
+    didoc["mac_address"] = WiFi.macAddress();
+    
+    serializeJson(didoc, dijson);
     server.sendHeader("Connection", "close");
-    server.send(200, "text/html", "Ready!");
+    server.send(200, "application/json", dijson);
   });
   
   server.on("/data.json", HTTP_GET, []() {
@@ -190,7 +186,7 @@ void printLCD(String line1, String line2) {
   if(line1.length() > 0) {
     printLine(line1, 1);
   }
-  if(line1.length() > 0) {
+  if(line2.length() > 0) {
     printLine(line2, 2);
   }
 }
