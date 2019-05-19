@@ -46,6 +46,7 @@ WiFiManager wifiManager;
 void setup() {
   Serial.begin(SERIAL_BAUDIOS_RATE);
   Serial.println("Test");
+  setupUltrasonic();
   setupHX711();
   setupLCD();
   setupESP();
@@ -62,7 +63,17 @@ void loop() {
 }
 
 void setHeight() {
+  long t;
+  long d;
+
+  digitalWrite(ULTRA_TRIGGER_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRA_TRIGGER_PIN, LOW);
   
+  t = pulseIn(ULTRA_ECHO_PIN, HIGH);
+  d = t/59;
+
+  height = d;
 }
 
 void setWeight() {
@@ -80,6 +91,12 @@ void setWeight() {
   } else {
     Serial.println("Balanza not ready!");
   }
+}
+
+void setupUltrasonic() {
+  pinMode(ULTRA_TRIGGER_PIN, OUTPUT);
+  pinMode(ULTRA_ECHO_PIN, INPUT);
+  digitalWrite(ULTRA_TRIGGER_PIN, LOW);
 }
 
 void setupHX711() {
